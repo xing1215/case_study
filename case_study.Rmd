@@ -1,0 +1,186 @@
+---
+title: "case study"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(viridis)
+library(leaflet)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  fig.width = 8,
+  fig.height = 6,
+  out.wideth = "90%"
+)
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+
+## do some data science
+
+```{r}
+library(p8105.datasets)
+data("nyc_airbnb")
+```
+
+* how are airbnb prices related to rent in the neighborhood?
+* which neighborhood is the most expensive, which is the most cheapest?
+* do hosts with multiple sites have higher prices or rating?
+* does price has relation to ratings?
+* is average length of stay related to neighbood? price? etc?
+
+## answer the questions
+
+```{r}
+nyc_airbnb = 
+  nyc_airbnb %>% 
+  mutate(
+    stars = review_scores_location / 2,
+    borough = neighbourhood_group
+  )
+```
+
+```{r}
+nyc_airbnb %>% 
+  mutate(
+    neighbourhood = as.factor(neighbourhood)) %>% 
+  filter(borough == "Manhattan") %>% 
+  mutate(
+    neighbourhood = fct_reorder(neighbourhood, price)) %>% 
+  ggplot(aes(x = price, y = neighbourhood)) +
+  geom_violin()
+```
+
+
+## answer another question
+
+```{r}
+price_neighborhood = 
+  select(nyc_airbnb, neighbourhood, price) %>% 
+  group_by(neighbourhood) %>% 
+  summarise(
+    mean_price = mean(price)
+  ) %>% 
+  arrange(-mean_price)
+price_neighborhood
+```
+
+
+```{r}
+nyc_airbnb %>% 
+  group_by(borough, room_type) %>% 
+  summarize(med_price = median(price, na.rm = TRUE)) %>% 
+  pivot_wider(
+    names_from = room_type,
+    values_from = med_price
+  )
+```
+
+```{r}
+nyc_airbnb %>% 
+  filter(borough == "Staten Isaland", room_type == "Shared romm")
+```
+
+```{r}
+nyc_airbnb %>% 
+  count(borough, room_type) %>% 
+  pivot_wider(
+    names_from = room_type,
+    values_from = n
+  )
+```
+
+```{r}
+nyc_airbnb %>% 
+  group_by(neighbourhood_group, neighbourhood) %>% 
+  summarize(
+    mean_price = mean(price, na.rm = TRUE),
+    mean_review = mean(review_scores_location, na.rm = TRUE)
+  ) %>% 
+  ggplot(aes(x = mean_review, y = mean_price)) + 
+  geom_point() +
+  facet_grid(~neighbourhood_group)
+```
+
+```{r}
+nyc_airbnb %>% 
+  count(neighbourhood)
+```
+
+```{r}
+nyc_airbnb %>% 
+  filter(neighbourhood == "Astoria") %>% 
+  ggplot(aes(x = stars, y = price)) +
+  geom_point()
+```
+
+
+## something that is very fancy!
+
+```{r}
+pal <- colorNumeric(
+  palette = "viridis",
+  domain = nyc_airbnb$stars
+)
+
+nyc_airbnb %>% 
+  filter(
+    borough == "Manhattan",
+    price > 2000) %>% 
+  leaflet() %>% 
+  addTiles() %>% 
+  addProviderTiles(providers$CartoDB.Positron) %>% 
+  addCircleMarkers(
+    ~lat, ~long,
+    color = ~pal(stars),
+    radius = 1)
+```
+
+another siilar chunk of code
+
+```{r}
+pal <- colorNumeric(
+  palette = "viridis",
+  domain = nyc_airbnb$stars
+)
+
+nyc_airbnb %>% 
+  filter(borough == "Manhattan") %>% 
+  mutate(
+    label = str_c("<b>Stars: ", stars, "</b><br>Price: ", price , sep = "")
+  ) %>% 
+  sample_n(1000) %>% 
+  leaflet() %>% 
+  addTiles() %>% 
+  addProviderTiles(providers$CartoDB.Positron) %>% 
+  addCircleMarkers(
+    ~lat, ~long,
+    color = ~pal(stars),
+    radius = 1, 
+    popup = ~ label)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
